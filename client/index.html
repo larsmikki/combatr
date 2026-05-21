@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Combatr" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Combatr</title>
+    <meta name="theme-color" content="#7b1d2b" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Cinzel:wght@500;600;700&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('combatr-theme');
+          var bg = {
+            'Parchment': '#f6efe1', 'Forge': '#1a1410', 'Arcane': '#0f0a1f',
+            'Verdant': '#0e1a14', 'Royal': '#0c1226', 'Crimson': '#1a0a0d',
+            'Bone': '#f3eee4', 'Mono Dark': '#0e1014', 'Mono Light': '#f4f5f7',
+            'Twilight': '#10131d'
+          }[stored] || '#f6efe1';
+          var darkSet = { 'Forge':1,'Arcane':1,'Verdant':1,'Royal':1,'Crimson':1,'Mono Dark':1,'Twilight':1 };
+          document.documentElement.style.backgroundColor = bg;
+          document.body.style.backgroundColor = bg;
+          if (darkSet[stored]) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

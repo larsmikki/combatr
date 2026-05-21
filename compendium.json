@@ -1,0 +1,66 @@
+{
+  "sources": {
+    "Monster Manual": {
+      "source": "MM",
+      "monsterUrl": "https://5e.tools/data/bestiary/bestiary-mm.json",
+      "spellUrl": null
+    },
+    "Player's Handbook": {
+      "source": "PHB",
+      "monsterUrl": "https://5e.tools/data/bestiary/bestiary-phb.json",
+      "spellUrl": "https://5e.tools/data/spells/spells-phb.json"
+    },
+    "Lost Mine of Phandelver": {
+      "source": "LMoP",
+      "monsterUrl": "https://5e.tools/data/bestiary/bestiary-lmop.json",
+      "spellUrl": null
+    },
+    "Curse of Strahd": {
+      "source": "CoS",
+      "monsterUrl": "https://5e.tools/data/bestiary/bestiary-cos.json",
+      "spellUrl": null
+    },
+    "Tomb of Annihilation": {
+      "source": "ToA",
+      "monsterUrl": "https://5e.tools/data/bestiary/bestiary-toa.json",
+      "spellUrl": null
+    },
+    "Storm King's Thunder": {
+      "source": "SKT",
+      "monsterUrl": "https://5e.tools/data/bestiary/bestiary-skt.json",
+      "spellUrl": null
+    },
+    "Waterdeep: Dragon Heist": {
+      "source": "WDH",
+      "monsterUrl": "https://5e.tools/data/bestiary/bestiary-wdh.json",
+      "spellUrl": null
+    },
+    "Waterdeep: Dungeon of the Mad Mage": {
+      "source": "WDMM",
+      "monsterUrl": "https://5e.tools/data/bestiary/bestiary-wdmm.json",
+      "spellUrl": null
+    },
+    "Hoard of the Dragon Queen": {
+      "source": "HotDQ",
+      "monsterUrl": "https://5e.tools/data/bestiary/bestiary-hotdq.json",
+      "spellUrl": null
+    },
+    "The Rise of Tiamat": {
+      "source": "RoT",
+      "monsterUrl": "https://5e.tools/data/bestiary/bestiary-rot.json",
+      "spellUrl": null
+    },
+    "Icewind Dale: Rime of the Frostmaiden": {
+      "source": "IDRotF",
+      "monsterUrl": "https://5e.tools/data/bestiary/bestiary-idrotf.json",
+      "spellUrl": "https://5e.tools/data/spells/spells-idrotf.json"
+    }
+  },
+  "items": {
+    "urls": [
+      "https://5e.tools/data/items-base.json",
+      "https://5e.tools/data/items.json"
+    ],
+    "filterField": "source"
+  }
+}

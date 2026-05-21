@@ -1,0 +1,19 @@
+{
+  "name": "combatr-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/index.js",
+    "start": "NODE_ENV=production node dist/index.js",
+    "lint": "echo 'no lint configured'",
+    "test": "echo 'no tests yet'"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.0",
+    "esbuild": "^0.27.5",
+    "tsx": "^4.19.3",
+    "typescript": "~5.9.3"
+  }
+}

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dist-server/
+*.log
+.DS_Store
+data/*.json
+!data/.gitkeep
+
+# Private content (proprietary; never commit)
+bestiary-*.json
+monsters-*.json
+monsters-*-skipped.txt

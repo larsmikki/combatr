@@ -1,0 +1,18 @@
+services:
+  combatr:
+    image: larsmikki/combatr:latest
+    container_name: combatr
+    ports:
+      - "3050:3050"
+    volumes:
+      - combatr_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3050/api/health"]
+      interval: 5m
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  combatr_data:

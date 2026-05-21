@@ -1,0 +1,13 @@
+{
+  "name": "Combatr",
+  "short_name": "Combatr",
+  "description": "Self-hosted D&D 5e encounter builder and combat tracker.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0e1014",
+  "theme_color": "#e11d48",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

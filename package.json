@@ -1,0 +1,25 @@
+{
+  "name": "combatr",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Self-hosted D&D 5e encounter builder and combat tracker — SRD 5.1 content, JSON storage, no database",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently -n client,server -c cyan,yellow \"npm run dev -w client\" \"tsx server/src/index.ts\"",
+    "server": "tsx server/src/index.ts",
+    "build": "npm run build -w client && npm run build -w server",
+    "start": "NODE_ENV=production node server/dist/index.js",
+    "lint": "npm run lint -w client && npm run lint -w server",
+    "test": "npm run test -w client && npm run test -w server"
+  },
+  "devDependencies": {
+    "@types/pdf-parse": "^1.1.5",
+    "concurrently": "^9.1.0",
+    "pdf-parse": "^2.4.5",
+    "tsx": "^4.19.3",
+    "typescript": "~5.9.3"
+  }
+}
