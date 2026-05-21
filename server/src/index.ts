@@ -1,6 +1,7 @@
 import { createServer } from 'http'
 import { readFileSync, existsSync } from 'fs'
 import { join, extname } from 'path'
+import dns from 'dns/promises'
 import { storage } from './db/storage.js'
 import { config } from './config.js'
 import { logger } from './logger.js'
@@ -46,6 +47,19 @@ function parseBody(raw: string): Record<string, unknown> | null {
 const FRONT_PREFIX  = 'https://5e.tools/data/'
 const MIRROR_PREFIX = 'https://raw.githubusercontent.com/5etools-mirror-3/5etools-src/main/data/'
 const ALLOWED_SUBPATHS = ['bestiary/', 'spells/', 'class/', 'races.json', 'backgrounds.json', 'feats.json', 'items.json', 'items-base.json']
+const SEARCH_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+const PRIVATE_RANGES = [
+  /^127\./,
+  /^10\./,
+  /^192\.168\./,
+  /^172\.(1[6-9]|2\d|3[01])\./,
+  /^169\.254\./,
+  /^::1$/,
+  /^fc00:/i,
+  /^fe80:/i,
+  /^0\.0\.0\.0$/,
+]
 
 function resolve5eToolsUrl(input: string): string | null {
   for (const sub of ALLOWED_SUBPATHS) {
@@ -91,6 +105,70 @@ async function proxy5eTools(rawQuery: string): Promise<Response> {
     const ms = Date.now() - start
     logger.error('proxy.5etools failed', { resolved, ms, error: String(e) })
     return err(`Proxy fetch failed: ${e instanceof Error ? e.message : String(e)}`, 502)
+  }
+}
+
+async function assertPublicUrl(rawUrl: string): Promise<URL> {
+  let parsed: URL
+  try {
+    parsed = new URL(rawUrl)
+  } catch {
+    throw new Error('Invalid URL')
+  }
+  if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Only http/https URLs are allowed')
+  const { address } = await dns.lookup(parsed.hostname)
+  if (PRIVATE_RANGES.some(range => range.test(address))) throw new Error('URL resolves to a private address')
+  return parsed
+}
+
+async function searchImages(rawQuery: string): Promise<Response> {
+  const params = new URLSearchParams(rawQuery)
+  const query = params.get('q')?.trim() ?? ''
+  const offset = parseInt(params.get('offset') ?? '0', 10)
+  if (!query) return err('Missing ?q=', 400)
+
+  const encodedQuery = encodeURIComponent(query)
+  try {
+    const initHtml = await fetch(`https://duckduckgo.com/?q=${encodedQuery}&iax=images&ia=images`, {
+      headers: { 'User-Agent': SEARCH_USER_AGENT },
+    }).then(response => response.text())
+    const vqdMatch = initHtml.match(/vqd=['"]?([^'"&\s]+)/)
+    if (!vqdMatch) return err('Could not get DuckDuckGo session token', 502)
+
+    const data = await fetch(
+      `https://duckduckgo.com/i.js?q=${encodedQuery}&vqd=${encodeURIComponent(vqdMatch[1])}&o=json&s=${Number.isFinite(offset) ? offset : 0}`,
+      { headers: { 'User-Agent': SEARCH_USER_AGENT, Referer: 'https://duckduckgo.com/' } },
+    ).then(response => response.json() as Promise<{ results?: Array<{ thumbnail: string; image: string; title?: string }> }>)
+
+    return json({
+      images: (data.results ?? []).slice(0, 9).map(result => ({
+        thumb: result.thumbnail,
+        full: result.image,
+        title: result.title ?? '',
+      })),
+    })
+  } catch (e) {
+    logger.error('image.search failed', { query, offset, error: String(e) })
+    return err(`Image search failed: ${e instanceof Error ? e.message : String(e)}`, 502)
+  }
+}
+
+async function proxyImageData(rawQuery: string): Promise<Response> {
+  const params = new URLSearchParams(rawQuery)
+  const target = params.get('url')?.trim() ?? ''
+  if (!target) return err('Missing ?url=', 400)
+
+  try {
+    await assertPublicUrl(target)
+    const upstream = await fetch(target, { headers: { 'User-Agent': SEARCH_USER_AGENT } })
+    if (!upstream.ok) return err(`Upstream ${upstream.status} ${upstream.statusText}`, 502)
+    const contentType = (upstream.headers.get('content-type') ?? 'image/jpeg').split(';')[0].trim()
+    if (!ALLOWED_IMAGE_TYPES.has(contentType)) return err(`Unsupported image type: ${contentType}`, 415)
+    const buffer = Buffer.from(await upstream.arrayBuffer())
+    return json({ dataUrl: `data:${contentType};base64,${buffer.toString('base64')}` })
+  } catch (e) {
+    logger.error('image.proxy failed', { target, error: String(e) })
+    return err(`Image fetch failed: ${e instanceof Error ? e.message : String(e)}`, 502)
   }
 }
 
@@ -344,6 +422,10 @@ function startServer() {
       try {
         if (method === 'GET' && (path === '/api/proxy/bestiary' || path === '/api/proxy/5etools')) {
           response = await proxy5eTools(rawQuery)
+        } else if (method === 'GET' && path === '/api/search-images') {
+          response = await searchImages(rawQuery)
+        } else if (method === 'GET' && path === '/api/proxy-image-data') {
+          response = await proxyImageData(rawQuery)
         } else {
           response = handleRequest(method, path ?? '/', body)
         }

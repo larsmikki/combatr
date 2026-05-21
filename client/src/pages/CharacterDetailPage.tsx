@@ -15,6 +15,25 @@ const uid = () => Math.random().toString(36).slice(2, 10)
 const POINT_BUY_BUDGET = 21
 const POINT_BUY_COST: Record<number, number> = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 }
 type PickerKind = 'race' | 'background' | 'class' | 'subclass'
+interface PortraitSearchResult {
+  thumb: string
+  full: string
+  title: string
+}
+
+async function searchPortraitImages(query: string, offset = 0): Promise<PortraitSearchResult[]> {
+  const res = await fetch(`/api/search-images?q=${encodeURIComponent(query)}&offset=${offset}`)
+  if (!res.ok) throw new Error('Search failed')
+  const { images } = await res.json() as { images?: PortraitSearchResult[] }
+  return images ?? []
+}
+
+async function proxyImageToDataUrl(url: string): Promise<string> {
+  const res = await fetch(`/api/proxy-image-data?url=${encodeURIComponent(url)}`)
+  if (!res.ok) throw new Error('Image fetch failed')
+  const { dataUrl } = await res.json() as { dataUrl: string }
+  return dataUrl
+}
 
 function mergeRules(custom: Record<string, RuleElement>): RuleElement[] {
   const key = (r: RuleElement) => [
@@ -158,6 +177,13 @@ export default function CharacterDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [picker, setPicker] = useState<PickerKind | null>(null)
   const [previewSlug, setPreviewSlug] = useState<string | null>(null)
+  const [portraitResults, setPortraitResults] = useState<PortraitSearchResult[]>([])
+  const [portraitQuery, setPortraitQuery] = useState('')
+  const [portraitOffset, setPortraitOffset] = useState(0)
+  const [portraitSearchError, setPortraitSearchError] = useState('')
+  const [isSearchingPortraits, setIsSearchingPortraits] = useState(false)
+  const [isLoadingMorePortraits, setIsLoadingMorePortraits] = useState(false)
+  const [loadingPortraitIndex, setLoadingPortraitIndex] = useState<number | null>(null)
   const { characters, customRuleElements, customSpells, upsertCharacter } = useCombat()
   const sheet = id ? characters[id] : null
   const rules = mergeRules(customRuleElements)
@@ -221,15 +247,55 @@ export default function CharacterDetailPage() {
     }
     reader.readAsDataURL(file)
   }
-  const searchPortrait = () => {
-    const terms = [
+  const portraitSearchTerms = [
       sheet.gender,
       selectedRace?.name,
       currentClassRule?.name,
       'portrait',
-    ].filter(Boolean).join(' ')
-    const url = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(terms || 'fantasy character portrait')}`
-    window.open(url, '_blank', 'noopener,noreferrer')
+    ].filter(Boolean).join(' ') || 'fantasy character portrait'
+  const searchPortrait = async () => {
+    setIsSearchingPortraits(true)
+    setPortraitSearchError('')
+    setPortraitResults([])
+    setPortraitOffset(0)
+    setPortraitQuery(portraitSearchTerms)
+    try {
+      const results = await searchPortraitImages(portraitSearchTerms, 0)
+      if (results.length === 0) setPortraitSearchError('No results found. Try changing gender, race, or class.')
+      setPortraitResults(results)
+    } catch {
+      setPortraitSearchError('Search failed. Check the connection and try again.')
+    } finally {
+      setIsSearchingPortraits(false)
+    }
+  }
+  const loadMorePortraits = async () => {
+    const nextOffset = portraitOffset + 9
+    setIsLoadingMorePortraits(true)
+    try {
+      const results = await searchPortraitImages(portraitQuery || portraitSearchTerms, nextOffset)
+      if (results.length > 0) {
+        setPortraitResults(prev => [...prev, ...results])
+        setPortraitOffset(nextOffset)
+      }
+    } catch {
+      setPortraitSearchError('Could not load more results.')
+    } finally {
+      setIsLoadingMorePortraits(false)
+    }
+  }
+  const selectPortraitResult = async (result: PortraitSearchResult, index: number) => {
+    setLoadingPortraitIndex(index)
+    setPortraitSearchError('')
+    try {
+      const dataUrl = await proxyImageToDataUrl(result.full).catch(() => proxyImageToDataUrl(result.thumb))
+      save({ portraitUrl: dataUrl })
+      setPortraitResults([])
+    } catch {
+      setPortraitSearchError('Could not load that image. Try another result.')
+    } finally {
+      setLoadingPortraitIndex(null)
+    }
   }
   const setAbility = (ability: Ability, value: number) => {
     const nextValue = scoreMode === 'point-buy'
@@ -385,14 +451,43 @@ export default function CharacterDetailPage() {
                     <option value="female">Female</option>
                   </Select>
                 </label>
-                <Button variant="secondary" onClick={searchPortrait} fullWidth>
-                  Search {[
-                    sheet.gender,
-                    selectedRace?.name,
-                    currentClassRule?.name,
-                    'portrait',
-                  ].filter(Boolean).join(' ')}
+                <Button variant="secondary" onClick={searchPortrait} fullWidth disabled={isSearchingPortraits}>
+                  {isSearchingPortraits ? 'Searching...' : `Find ${portraitSearchTerms}`}
                 </Button>
+                {portraitSearchError && <p className="text-xs" style={{ color: '#dc2626' }}>{portraitSearchError}</p>}
+                {portraitResults.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-3 gap-2">
+                      {portraitResults.map((result, index) => (
+                        <button key={`${result.thumb}-${index}`} type="button"
+                          onClick={() => selectPortraitResult(result, index)}
+                          disabled={loadingPortraitIndex !== null}
+                          title={result.title}
+                          className="relative aspect-[3/4] rounded-md overflow-hidden p-0"
+                          style={{
+                            background: theme.surface2,
+                            border: `1px solid ${theme.border}`,
+                            cursor: loadingPortraitIndex !== null ? 'wait' : 'pointer',
+                          }}>
+                          <img src={result.thumb} alt={result.title || 'Portrait result'} className="w-full h-full object-cover"
+                            onError={e => { (e.target as HTMLImageElement).style.opacity = '0.2' }} />
+                          {loadingPortraitIndex === index && (
+                            <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold"
+                              style={{ background: 'rgba(0,0,0,.55)', color: '#fff' }}>
+                              Loading
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button variant="secondary" onClick={loadMorePortraits} disabled={isLoadingMorePortraits}>
+                        {isLoadingMorePortraits ? 'Loading...' : 'More'}
+                      </Button>
+                      <Button variant="secondary" onClick={() => setPortraitResults([])}>Clear</Button>
+                    </div>
+                  </div>
+                )}
                 <label className="block text-xs" style={{ color: theme.text2 }}>
                   Image URL
                   <Input value={sheet.portraitUrl?.startsWith('data:') ? '' : sheet.portraitUrl ?? ''}
