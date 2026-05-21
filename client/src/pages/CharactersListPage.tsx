@@ -50,6 +50,14 @@ export default function CharactersListPage() {
               return (
                 <div key={c.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg flex-wrap"
                   style={{ background: theme.surface2, border: `1px solid ${theme.border}` }}>
+                  <div className="w-12 h-14 rounded-md overflow-hidden flex items-center justify-center text-[10px] shrink-0"
+                    style={{ background: theme.surface, border: `1px solid ${theme.border}`, color: theme.text2 }}>
+                    {c.portraitUrl ? (
+                      <img src={c.portraitUrl} alt={`${c.name} portrait`} className="w-full h-full object-cover" />
+                    ) : (
+                      <span>PC</span>
+                    )}
+                  </div>
                   <Link to={`/characters/${c.id}`} className="flex-1 min-w-0" style={{ textDecoration: 'none' }}>
                     <div className="text-sm font-semibold" style={{ color: theme.text }}>{c.name}</div>
                     <div className="text-[11px]" style={{ color: theme.text2 }}>

@@ -231,6 +231,8 @@ export interface CharacterSheet {
   name: string
   ancestrySlug?: string
   backgroundSlug?: string
+  gender?: '' | 'male' | 'female'
+  portraitUrl?: string
   classes: CharacterClassProgression[]
   levelHistory: CharacterLevelEntry[]
   abilityScoreMode: 'standard-array' | 'point-buy' | 'rolled' | 'manual'

@@ -28,6 +28,8 @@ export function createCharacter(campaignId: string, rules: RuleElement[]): Chara
     name: 'New Character',
     ancestrySlug: firstRace?.slug,
     backgroundSlug: firstBackground?.slug,
+    gender: '',
+    portraitUrl: '',
     classes: firstClass ? [{ classSlug: firstClass.slug, levels: 1 }] : [],
     levelHistory: firstClass ? [{ id: uid(), classSlug: firstClass.slug, level: 1, hpMode: 'average', hpValue: hitDie }] : [],
     abilityScoreMode: 'point-buy',

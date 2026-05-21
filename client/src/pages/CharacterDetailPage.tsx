@@ -92,6 +92,11 @@ function shortSummary(rule: RuleElement): string {
   return lines.slice(0, 3).join(' · ')
 }
 
+function cleanRuleText(text: string | undefined): string {
+  if (!text) return ''
+  return text.replace(/\n?\s*Referenced progression\s*\n(?:.+\|.+\n?)+(?:\.\.\.and \d+ more)?/gi, '').trim()
+}
+
 function grantsForAbility(rule: RuleElement | undefined, ability: Ability): number {
   return (rule?.grants ?? []).reduce((sum, grant) =>
     grant.type === 'ability' && grant.ability === ability ? sum + grant.value : sum, 0)
@@ -104,9 +109,10 @@ function fixedAbilityBonusTotal(rule: RuleElement | undefined): number {
 function parseProgressionRef(ref: string): { name: string; level: string; source: string } {
   const parts = ref.split('|')
   const levelIndex = parts.findIndex((part, index) => index > 2 && /^\d+$/.test(part))
-  const source = levelIndex >= 0
-    ? parts.slice(levelIndex + 1).find(part => part && !/^\d+$/.test(part)) ?? ''
-    : ''
+  let source = ''
+  if (levelIndex === 3) source = parts[4] || parts[2] || ''
+  else if (levelIndex === 5) source = parts[6] || parts[4] || parts[2] || ''
+  else if (levelIndex >= 0) source = parts.slice(levelIndex + 1).find(part => part && !/^\d+$/.test(part)) ?? ''
   return {
     name: parts[0] ?? ref,
     level: levelIndex >= 0 ? parts[levelIndex] : '',
@@ -207,6 +213,24 @@ export default function CharacterDetailPage() {
     upsertCharacter({ ...sheet, ...patch, updatedAt: new Date().toISOString() })
   }
   const saveFull = (next: CharacterSheet) => upsertCharacter({ ...next, updatedAt: new Date().toISOString() })
+  const setPortraitFile = (file: File | undefined) => {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') save({ portraitUrl: reader.result })
+    }
+    reader.readAsDataURL(file)
+  }
+  const searchPortrait = () => {
+    const terms = [
+      sheet.gender,
+      selectedRace?.name,
+      currentClassRule?.name,
+      'portrait',
+    ].filter(Boolean).join(' ')
+    const url = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(terms || 'fantasy character portrait')}`
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
   const setAbility = (ability: Ability, value: number) => {
     const nextValue = scoreMode === 'point-buy'
       ? Math.max(8, Math.min(15, value))
@@ -341,6 +365,56 @@ export default function CharacterDetailPage() {
 
       <div className="grid lg:grid-cols-[1fr_340px] gap-5">
         <div className="space-y-5">
+          <Surface className="p-5">
+            <h2 className="text-base font-bold mb-3" style={{ color: theme.text }}>Portrait</h2>
+            <div className="grid sm:grid-cols-[160px_1fr] gap-4 items-start">
+              <div className="aspect-[3/4] rounded-lg overflow-hidden flex items-center justify-center text-xs text-center"
+                style={{ background: theme.surface2, border: `1px solid ${theme.border}`, color: theme.text2 }}>
+                {sheet.portraitUrl ? (
+                  <img src={sheet.portraitUrl} alt={`${sheet.name} portrait`} className="w-full h-full object-cover" />
+                ) : (
+                  <span>No portrait</span>
+                )}
+              </div>
+              <div className="space-y-3">
+                <label className="block text-xs" style={{ color: theme.text2 }}>
+                  Gender
+                  <Select value={sheet.gender ?? ''} onChange={e => save({ gender: e.target.value as CharacterSheet['gender'] })} className="mt-1">
+                    <option value="">Not specified</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </Select>
+                </label>
+                <Button variant="secondary" onClick={searchPortrait} fullWidth>
+                  Search {[
+                    sheet.gender,
+                    selectedRace?.name,
+                    currentClassRule?.name,
+                    'portrait',
+                  ].filter(Boolean).join(' ')}
+                </Button>
+                <label className="block text-xs" style={{ color: theme.text2 }}>
+                  Image URL
+                  <Input value={sheet.portraitUrl?.startsWith('data:') ? '' : sheet.portraitUrl ?? ''}
+                    placeholder="https://..."
+                    onChange={e => save({ portraitUrl: e.target.value })}
+                    className="mt-1" />
+                </label>
+                <label className="block text-xs" style={{ color: theme.text2 }}>
+                  Upload image
+                  <input type="file" accept="image/*" onChange={e => setPortraitFile(e.target.files?.[0])}
+                    className="mt-1 block w-full text-xs" style={{ color: theme.text }} />
+                </label>
+                <div className="flex gap-2">
+                  <Button variant="secondary" onClick={() => save({ portraitUrl: '' })} disabled={!sheet.portraitUrl}>Remove portrait</Button>
+                </div>
+                <p className="text-xs" style={{ color: theme.text2 }}>
+                  Uploaded images are stored with the character and included in Settings export.
+                </p>
+              </div>
+            </div>
+          </Surface>
+
           <Surface className="p-5">
             <h2 className="text-base font-bold mb-3" style={{ color: theme.text }}>Build</h2>
             <div className="grid sm:grid-cols-2 gap-3">
@@ -577,7 +651,7 @@ export default function CharacterDetailPage() {
               {derived.features.map(f => (
                 <details key={f.slug} className="text-xs rounded p-2" style={{ background: theme.surface2, color: theme.text }}>
                   <summary className="font-semibold cursor-pointer">{f.name}</summary>
-                  <p className="mt-1 whitespace-pre-wrap" style={{ color: theme.text2 }}>{f.entries || 'Imported feature text unavailable.'}</p>
+                  <p className="mt-1 whitespace-pre-wrap" style={{ color: theme.text2 }}>{cleanRuleText(f.entries) || 'Imported feature text unavailable.'}</p>
                 </details>
               ))}
             </div>
@@ -665,7 +739,7 @@ export default function CharacterDetailPage() {
                               Level {feature.level ?? '?'}: {feature.name}
                             </summary>
                             <div className="text-xs mt-2 whitespace-pre-wrap leading-relaxed" style={{ color: theme.text2 }}>
-                              {feature.entries || 'No feature text available.'}
+                              {cleanRuleText(feature.entries) || 'No feature text available.'}
                             </div>
                           </details>
                         ))}
@@ -697,7 +771,7 @@ export default function CharacterDetailPage() {
                     </div>
                   )}
                   <div className="text-sm whitespace-pre-wrap leading-relaxed" style={{ color: theme.text }}>
-                    {preview.entries || 'No descriptive text available for this imported rule element.'}
+                    {cleanRuleText(preview.entries) || 'No descriptive text available for this imported rule element.'}
                   </div>
                 </>
               ) : (
