@@ -204,6 +204,9 @@ export default function CharacterDetailPage() {
   const selectedRace = sheet.ancestrySlug ? rules.find(r => r.slug === sheet.ancestrySlug) : undefined
   const selectedBackground = sheet.backgroundSlug ? rules.find(r => r.slug === sheet.backgroundSlug) : undefined
   const selectedSubclass = sheet.classes[0]?.subclassSlug ? rules.find(r => r.slug === sheet.classes[0]?.subclassSlug) : undefined
+  const currentClassLevels = sheet.classes[0]?.levels ?? derived.level
+  const subclassUnlockLevel = currentClassRule?.subclassLevel ?? 3
+  const canChooseSubclass = subclasses.length > 0 && currentClassLevels >= subclassUnlockLevel
   const featureProgression = rules
     .filter(r => r.kind === 'classFeature' && currentClassRule && r.className === currentClassRule.name)
     .sort((a, b) => (a.level ?? 99) - (b.level ?? 99) || a.name.localeCompare(b.name))
@@ -377,7 +380,7 @@ export default function CharacterDetailPage() {
     if (picker === 'race') save({ ancestrySlug: preview.slug })
     else if (picker === 'background') save({ backgroundSlug: preview.slug })
     else if (picker === 'class') setPrimaryClass(preview.slug)
-    else if (picker === 'subclass') setSubclass(preview.slug)
+    else if (picker === 'subclass' && canChooseSubclass) setSubclass(preview.slug)
     setPicker(null)
     setPreviewSlug(null)
   }
@@ -534,9 +537,13 @@ export default function CharacterDetailPage() {
               <div className="sm:col-span-2">
                 <PickerButton
                   label="Subclass"
-                  value={selectedSubclass?.name ?? (subclasses.length ? 'Choose subclass' : 'No subclass options for current class')}
-                  summary={selectedSubclass ? shortSummary(selectedSubclass) : 'Subclass features unlock at class-specific levels'}
-                  disabled={subclasses.length === 0}
+                  value={canChooseSubclass
+                    ? selectedSubclass?.name ?? 'Choose subclass'
+                    : subclasses.length ? `Available at class level ${subclassUnlockLevel}` : 'No subclass options for current class'}
+                  summary={selectedSubclass && canChooseSubclass
+                    ? shortSummary(selectedSubclass)
+                    : `Current class level ${currentClassLevels}; subclass choice unlocks at level ${subclassUnlockLevel}.`}
+                  disabled={!canChooseSubclass}
                   onClick={() => openPicker('subclass', sheet.classes[0]?.subclassSlug)}
                 />
               </div>

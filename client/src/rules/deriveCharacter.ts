@@ -226,14 +226,17 @@ export function deriveCharacter(sheet: CharacterSheet, ruleElements: RuleElement
     const className = cls.name
     featureRules.push(...ruleElements.filter(r =>
       r.kind === 'classFeature' && r.className === className && (r.level ?? 99) <= c.levels))
-    if (c.subclassSlug) {
+    const subclassUnlockLevel = cls.subclassLevel ?? 3
+    if (c.subclassSlug && c.levels >= subclassUnlockLevel) {
       const subclass = ruleBySlug[c.subclassSlug]
       if (subclass) {
         featureRules.push(subclass)
         featureRules.push(...ruleElements.filter(r =>
           r.kind === 'subclassFeature' && r.className === className && r.subclassName === subclass.name && (r.level ?? 99) <= c.levels))
       } else warnings.push(`Missing subclass rule for ${c.subclassSlug}.`)
-    } else if (c.levels >= (cls.subclassLevel ?? 3)) {
+    } else if (c.subclassSlug && c.levels < subclassUnlockLevel) {
+      warnings.push(`${cls.name} subclass unlocks at class level ${subclassUnlockLevel}.`)
+    } else if (c.levels >= subclassUnlockLevel) {
       warnings.push(`${cls.name} needs a subclass selection.`)
     }
   }
