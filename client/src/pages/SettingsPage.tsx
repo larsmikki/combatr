@@ -10,7 +10,7 @@ import { convertSpellbook, looksLike5eToolsSpellbook } from '@/lib/convert5eTool
 import { convertRules, looksLike5eToolsRules } from '@/lib/convert5eToolsRules'
 
 // Books that have a per-source spell file on 5etools (per compendium.json).
-const SPELL_SOURCE_CODES = ['PHB', 'IDRotF'] as const
+const SPELL_SOURCE_CODES = ['XPHB', 'IDRotF'] as const
 const CHARACTER_SOURCE_CODES = ['PHB', 'XPHB', 'TCE', 'XGE', 'SCAG', 'EFA', 'EGW', 'FRHoF'] as const
 const CLASS_FILE_CODES = ['artificer','barbarian','bard','cleric','druid','fighter','monk','paladin','ranger','rogue','sorcerer','warlock','wizard'] as const
 const CHARACTER_SHARED_FILES = ['races.json', 'backgrounds.json', 'feats.json'] as const
@@ -213,39 +213,75 @@ export default function SettingsPage() {
     return JSON.parse(text)
   }
 
-  const importCharacterSource = async (sourceCode: string) => {
+  // Import a whole rule book in one click: pulls every sub-section 5e.tools has
+  // for that source — bestiary, per-source spell file, and character rules
+  // (classes, races, backgrounds, feats). Sub-sections a book lacks are skipped.
+  const importBook = async (sourceCode: string) => {
     setImportNote(null)
     setFetching(true)
     setCharacterSource(sourceCode)
     try {
       const sourceName = SOURCE_NAMES[sourceCode] ?? sourceCode
-      const converted: RuleElement[] = []
-      const skipped: Array<{ name: string; reason: string }> = []
-      const urls = [
-        ...CLASS_FILE_CODES.map(code => `https://5e.tools/data/class/class-${code}.json`),
-        ...CHARACTER_SHARED_FILES.map(file => `https://5e.tools/data/${file}`),
-      ]
-      for (const url of urls) {
-        const parsed = await fetchJsonViaProxy(url)
-        if (!looksLike5eToolsRules(parsed)) continue
-        const result = convertRules(parsed, { sourceFilter: sourceCode, sourceName })
-        converted.push(...result.converted)
-        skipped.push(...result.skipped)
+      const code = sourceCode.toLowerCase()
+      const parts: string[] = []
+
+      // Bestiary — any book may have one.
+      try {
+        const parsed = await fetchJsonViaProxy(`https://5e.tools/data/bestiary/bestiary-${code}.json`)
+        if (looksLike5eToolsBestiary(parsed)) {
+          const result = convertBestiary(parsed, { sourceName, defaultTag: SOURCE_TAGS[sourceCode] })
+          if (result.converted.length) {
+            const r = await bulkImportMonsters(result.converted)
+            if (r.imported) parts.push(`${r.imported} monster${r.imported === 1 ? '' : 's'}`)
+          }
+        }
+      } catch { /* no bestiary file for this book */ }
+
+      // Spells — only books with a per-source spell file on 5e.tools.
+      if ((SPELL_SOURCE_CODES as readonly string[]).includes(sourceCode)) {
+        try {
+          const parsed = await fetchJsonViaProxy(`https://5e.tools/data/spells/spells-${code}.json`)
+          if (looksLike5eToolsSpellbook(parsed)) {
+            const result = convertSpellbook(parsed, { sourceName })
+            if (result.converted.length) {
+              const r = await bulkImportSpells(result.converted)
+              if (r.imported) parts.push(`${r.imported} spell${r.imported === 1 ? '' : 's'}`)
+            }
+          }
+        } catch { /* no spell file for this book */ }
       }
-      const dedup = new Map<string, RuleElement>()
-      for (const rule of converted) dedup.set(rule.slug, rule)
-      const list = [...dedup.values()]
-      if (list.length === 0) {
-        setImportNote({ ok: false, text: `No character rules found for ${sourceCode}.` })
-        return
+
+      // Characters — only books with class/race/background/feat content.
+      if ((CHARACTER_SOURCE_CODES as readonly string[]).includes(sourceCode)) {
+        const converted: RuleElement[] = []
+        const urls = [
+          ...CLASS_FILE_CODES.map(c => `https://5e.tools/data/class/class-${c}.json`),
+          ...CHARACTER_SHARED_FILES.map(file => `https://5e.tools/data/${file}`),
+        ]
+        for (const url of urls) {
+          try {
+            const parsed = await fetchJsonViaProxy(url)
+            if (!looksLike5eToolsRules(parsed)) continue
+            const result = convertRules(parsed, { sourceFilter: sourceCode, sourceName })
+            converted.push(...result.converted)
+          } catch { /* skip a file that fails to fetch */ }
+        }
+        const dedup = new Map<string, RuleElement>()
+        for (const rule of converted) dedup.set(rule.slug, rule)
+        const list = [...dedup.values()]
+        if (list.length) {
+          const r = await bulkImportRuleElements(list)
+          if (r.imported) parts.push(`${r.imported} rule element${r.imported === 1 ? '' : 's'}`)
+        }
       }
-      const r = await bulkImportRuleElements(list)
-      setImportNote({
-        ok: true,
-        text: `Imported ${r.imported} ${sourceCode} character rule element${r.imported === 1 ? '' : 's'}, skipped ${r.skipped}${skipped.length ? `, converter skipped ${skipped.length}` : ''}.`,
-      })
+
+      if (parts.length === 0) {
+        setImportNote({ ok: false, text: `No bestiary, spell, or character data found on 5e.tools for ${sourceName}.` })
+      } else {
+        setImportNote({ ok: true, text: `Imported ${sourceName}: ${parts.join(', ')}.` })
+      }
     } catch (e) {
-      setImportNote({ ok: false, text: e instanceof Error ? e.message : 'Character source import failed' })
+      setImportNote({ ok: false, text: e instanceof Error ? e.message : 'Book import failed' })
     } finally {
       setFetching(false)
     }
@@ -385,42 +421,31 @@ export default function SettingsPage() {
           </Button>
         </div>
 
-        {/* Quick-link chips */}
-        <div className="mb-2 flex flex-wrap gap-1 items-center">
-          <span className="text-[10px] uppercase tracking-wider mr-1" style={{ color: theme.text2 }}>Bestiaries:</span>
-          {Object.entries(SOURCE_NAMES).map(([code, label]) => {
-            const url = `https://5e.tools/data/bestiary/bestiary-${code.toLowerCase()}.json`
-            return (
-              <button key={code} onClick={() => { setImportUrl(url); fetchAndImport(url) }}
-                title={`${label} — ${url}`}
-                className="text-[11px] px-2 py-0.5 rounded hover:opacity-90"
-                style={chipStyle}>{code}</button>
-            )
-          })}
+        {/* One-click rule books — each pulls every sub-section the book has. */}
+        <div className="mb-1 flex flex-wrap gap-1 items-center">
+          <span className="text-[10px] uppercase tracking-wider mr-1" style={{ color: theme.text2 }}>Rule books:</span>
+          {Object.entries(SOURCE_NAMES)
+            // 2014 PHB is hidden; XPHB (2024 PHB) is the canonical "PHB" people expect.
+            .filter(([code]) => code !== 'PHB')
+            .map(([code, label]) => {
+              const display = code === 'XPHB' ? 'PHB' : code
+              const subsections = [
+                'bestiary',
+                (SPELL_SOURCE_CODES as readonly string[]).includes(code) ? 'spells' : '',
+                (CHARACTER_SOURCE_CODES as readonly string[]).includes(code) ? 'character rules' : '',
+              ].filter(Boolean).join(', ')
+              return (
+                <button key={code} onClick={() => importBook(code)}
+                  disabled={fetching}
+                  title={`${label} — imports ${subsections} from 5e.tools in one go`}
+                  className="text-[11px] px-2 py-0.5 rounded hover:opacity-90 disabled:opacity-50"
+                  style={chipStyle}>{display}</button>
+              )
+            })}
         </div>
-        <div className="mb-3 flex flex-wrap gap-1 items-center">
-          <span className="text-[10px] uppercase tracking-wider mr-1" style={{ color: theme.text2 }}>Spells:</span>
-          {SPELL_SOURCE_CODES.map(code => {
-            const label = SOURCE_NAMES[code]
-            const url = `https://5e.tools/data/spells/spells-${code.toLowerCase()}.json`
-            return (
-              <button key={code} onClick={() => { setImportUrl(url); fetchAndImport(url) }}
-                title={`${label} spells — ${url}`}
-                className="text-[11px] px-2 py-0.5 rounded hover:opacity-90"
-                style={chipStyle}>{code}</button>
-            )
-          })}
-        </div>
-        <div className="mb-3 flex flex-wrap gap-1 items-center">
-          <span className="text-[10px] uppercase tracking-wider mr-1" style={{ color: theme.text2 }}>Characters:</span>
-          {CHARACTER_SOURCE_CODES.map(code => (
-            <button key={code} onClick={() => importCharacterSource(code)}
-              disabled={fetching}
-              title={`Import all ${SOURCE_NAMES[code] ?? code} character rules from 5e.tools class, race, background, and feat data`}
-              className="text-[11px] px-2 py-0.5 rounded hover:opacity-90 disabled:opacity-50"
-              style={chipStyle}>{code}</button>
-          ))}
-        </div>
+        <p className="text-[10px] mb-3" style={{ color: theme.text2 }}>
+          Clicking a book downloads its bestiary, spells, and character rules together — whichever 5e.tools has for it.
+        </p>
 
         {/* Paste / upload */}
         <Textarea value={importText} onChange={e => setImportText(e.target.value)}
