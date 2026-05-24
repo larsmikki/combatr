@@ -14,23 +14,82 @@ Self-hosted D&D 5e encounter builder and combat tracker. Bundles SRD 5.1 monster
 |---|---|---|
 | **Combatr** | 3050 | 3051 |
 
-## Development
+## Getting started
 
-```sh
+Pick whichever install path matches your setup. All paths land on [http://localhost:3050](http://localhost:3050).
+
+### 1. Docker (Docker Desktop, NAS, or any Docker server)
+
+```bash
+docker run -d \
+  --name combatr \
+  -p 3050:3050 \
+  -v combatr-data:/app/data \
+  --restart unless-stopped \
+  larsmikki/combatr:latest
+```
+
+Or with Compose:
+
+```yaml
+services:
+  combatr:
+    image: larsmikki/combatr:latest
+    container_name: combatr
+    ports:
+      - "3050:3050"
+    volumes:
+      - combatr-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  combatr-data:
+```
+
+### 2. Local install on Windows
+
+Requires [Git for Windows](https://git-scm.com/download/win) and [Node.js 20+](https://nodejs.org/).
+
+```powershell
+git clone https://github.com/larsmikki/combatr.git
+cd combatr
 npm install
 npm run dev
 ```
 
-The Vite dev server runs on `:3050` and proxies `/api` to the Node server on `:3051`.
+For a production build: `npm run build && npm start`.
 
-## Production
+### 3. Local install on macOS
 
-```sh
-npm run build
-npm start
+```bash
+brew install node git
+git clone https://github.com/larsmikki/combatr.git
+cd combatr
+npm install
+npm run dev
 ```
 
-The server serves the built client from `client/dist` and the API on the same port (3051 by default; set `PORT` to override).
+For a production build: `npm run build && npm start`.
+
+### 4. Local install on Linux
+
+Debian/Ubuntu:
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs git
+
+git clone https://github.com/larsmikki/combatr.git
+cd combatr
+npm install
+npm run dev
+```
+
+On Fedora/RHEL use `dnf install nodejs git`; on Arch use `pacman -S nodejs npm git`.
+
+For a production build: `npm run build && npm start`.
+
+In dev, the Vite server runs on `:3050` and proxies `/api` to the Node server on `:3051`. In prod, both are served from `:3050`.
 
 ## Data location
 

@@ -176,7 +176,7 @@ function handleRequest(method: string, url: string, body: string): Response {
   if (method === 'OPTIONS') return { status: 204, headers: { 'Content-Type': 'text/plain' }, body: '' }
 
   // ── Health ────────────────────────────────────────────────────────
-  if (method === 'GET' && url === '/api/health') return json({ status: 'ok' })
+  if ((method === 'GET' || method === 'HEAD') && url === '/api/health') return json({ status: 'ok' })
 
   // ── State snapshot (one round trip for the whole app) ─────────────
   if (method === 'GET' && url === '/api/state') return json(storage.getState())
