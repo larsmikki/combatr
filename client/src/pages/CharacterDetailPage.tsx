@@ -12,7 +12,7 @@ import { Surface, Button, Input, Select, Textarea, Modal } from '@/components/ui
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 const uid = () => Math.random().toString(36).slice(2, 10)
-const POINT_BUY_BUDGET = 21
+const POINT_BUY_BUDGET = 27
 const POINT_BUY_COST: Record<number, number> = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 }
 type PickerKind = 'race' | 'background' | 'class' | 'subclass'
 interface PortraitSearchResult {
@@ -310,7 +310,7 @@ export default function CharacterDetailPage() {
     if (mode === 'point-buy') {
       save({
         abilityScoreMode: mode,
-        abilityScores: { str: 13, dex: 12, con: 12, int: 12, wis: 10, cha: 10 },
+        abilityScores: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 },
       })
       return
     }
@@ -577,7 +577,7 @@ export default function CharacterDetailPage() {
               <h2 className="text-base font-bold" style={{ color: theme.text }}>Ability scores</h2>
               <div className="flex items-center gap-2">
                 <Select value={scoreMode} onChange={e => setAbilityMode(e.target.value as CharacterSheet['abilityScoreMode'])} className="min-w-[180px]">
-                  <option value="point-buy">Point buy 21</option>
+                  <option value="point-buy">Point buy</option>
                   <option value="manual">Free assignment</option>
                 </Select>
                 {scoreMode === 'point-buy' && (
@@ -610,7 +610,7 @@ export default function CharacterDetailPage() {
             </div>
             {scoreMode === 'point-buy' && (
               <p className="text-xs mt-3" style={{ color: pointRemaining < 0 ? '#dc2626' : theme.text2 }}>
-                Scores are limited to 8-15 before racial bonuses and use the standard 5e point-buy cost table with a 21 point budget.
+                Scores are limited to 8-15 before racial bonuses and use the standard 5e point-buy cost table with a 27 point budget.
               </p>
             )}
             <div className="mt-5 pt-4" style={{ borderTop: `1px solid ${theme.border}` }}>
