@@ -19,8 +19,8 @@ export const THEMES: ThemeDefinition[] = [
     name: 'Default', mode: 'light',
     bg: '#f4f5f7', surface: '#ffffff', surface2: '#e9ebef',
     border: 'rgba(0,0,0,0.09)', text: '#09090b', text2: '#71717a',
-    accent: '#e11d48', gradient: 'linear-gradient(135deg, #e11d48 0%, #ea580c 100%)',
-    previewColors: ['#f4f5f7', '#ffffff', '#e11d48'],
+    accent: '#dc2626', gradient: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+    previewColors: ['#f4f5f7', '#ffffff', '#dc2626'],
   },
   {
     name: 'Bone', mode: 'light',

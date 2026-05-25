@@ -15,7 +15,7 @@
   --theme-text:     #09090b;
   --theme-text2:    #71717a;
   --theme-accent:   #e11d48;
-  --theme-gradient: linear-gradient(135deg, #e11d48 0%, #ea580c 100%);
+  --theme-gradient: linear-gradient(135deg, #e11d48 0%, #881337 100%);
 }
 
 /* Tailwind v4 @theme — every --color-*, --radius-*, --shadow-* becomes a utility. */
@@ -60,9 +60,9 @@ html.dark {
    Combatr-specific overrides
    ────────────────────────────────────────────────────────────────────── */
 
-/* Brand gradient is fixed (rose to orange) and does not follow per-theme gradient. */
+/* Brand gradient is fixed (rose to deep red) and does not follow per-theme gradient. */
 :root {
-  --brand-gradient: linear-gradient(135deg, #e11d48 0%, #ea580c 100%);
+  --brand-gradient: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
 }
 
 @layer base {

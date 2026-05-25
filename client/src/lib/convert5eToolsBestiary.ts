@@ -36,12 +36,29 @@ function mapSize(size: unknown): CreatureSize {
   return 'Medium'
 }
 
+// Flattens a 5etools "choose one of" creature type, e.g.
+// { choose: ['celestial', 'fey', 'fiend'] } -> 'celestial, fey, or fiend'.
+// Returns undefined for shapes that aren't a string or a choose-list.
+function flattenChooseType(v: unknown): string | undefined {
+  if (typeof v === 'string') return v
+  if (v && typeof v === 'object' && Array.isArray((v as { choose?: unknown }).choose)) {
+    const opts = (v as { choose: string[] }).choose
+    if (opts.length === 0) return undefined
+    if (opts.length === 1) return opts[0]
+    return `${opts.slice(0, -1).join(', ')} or ${opts[opts.length - 1]}`
+  }
+  return undefined
+}
+
 function mapType(t: unknown): { type: string; subtype?: string } {
   if (typeof t === 'string') return { type: t }
+  // Some statblocks give the type itself as a choose-list (no wrapper object).
+  const direct = flattenChooseType(t)
+  if (direct) return { type: direct }
   if (t && typeof t === 'object') {
-    const obj = t as { type?: string; tags?: Array<string | { tag: string; prefix?: string }> }
+    const obj = t as { type?: unknown; tags?: Array<string | { tag: string; prefix?: string }> }
     const tags = (obj.tags ?? []).map(x => typeof x === 'string' ? x : `${x.prefix ?? ''}${x.tag}`)
-    return { type: obj.type ?? 'humanoid', subtype: tags.length ? tags.join(', ') : undefined }
+    return { type: flattenChooseType(obj.type) ?? 'humanoid', subtype: tags.length ? tags.join(', ') : undefined }
   }
   return { type: 'humanoid' }
 }

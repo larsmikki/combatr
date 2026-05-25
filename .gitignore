@@ -10,3 +10,6 @@ data/*.json
 bestiary-*.json
 monsters-*.json
 monsters-*-skipped.txt
+
+# Local design mockups / scratch artifacts
+icon-suggestions.html
