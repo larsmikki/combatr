@@ -13,3 +13,14 @@ monsters-*-skipped.txt
 
 # Local design mockups / scratch artifacts
 icon-suggestions.html
+
+# === Fleet structure baseline (shared/STRUCTURE.md §7) ===
+.env
+.env.*
+*.bat
+*.tsbuildinfo
+*.db
+cache/
+temp/
+test_album/
+Thumbs.db

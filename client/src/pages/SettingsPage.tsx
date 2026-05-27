@@ -5,9 +5,9 @@ import ThemePicker from '@/components/ThemePicker'
 import { useConfirm } from '@/components/ConfirmDialog'
 import { Surface, Button, Input, Textarea } from '@/components/ui'
 import type { Monster, RuleElement, Spell } from '@/types'
-import { convertBestiary, looksLike5eToolsBestiary } from '@/lib/convert5eToolsBestiary'
-import { convertSpellbook, looksLike5eToolsSpellbook } from '@/lib/convert5eToolsSpells'
-import { convertRules, looksLike5eToolsRules } from '@/lib/convert5eToolsRules'
+import { convertBestiary, looksLike5eToolsBestiary } from '@/utils/convert5eToolsBestiary'
+import { convertSpellbook, looksLike5eToolsSpellbook } from '@/utils/convert5eToolsSpells'
+import { convertRules, looksLike5eToolsRules } from '@/utils/convert5eToolsRules'
 
 // Books that have a per-source spell file on 5etools (per compendium.json).
 const SPELL_SOURCE_CODES = ['XPHB', 'IDRotF'] as const
@@ -40,6 +40,12 @@ const SOURCE_TAGS: Record<string, string> = {
   MM: 'mm', PHB: 'phb', LMoP: 'lmop', CoS: 'cos', ToA: 'toa', SKT: 'skt',
   WDH: 'wdh', WDMM: 'wdmm', HotDQ: 'hotdq', RoT: 'rot', IDRotF: 'rotf',
 }
+
+const TrashIcon = () => (
+  <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+    <path fillRule="evenodd" d="M9 2a1 1 0 0 0-.894.553L7.382 4H4a1 1 0 0 0 0 2v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6a1 1 0 1 0 0-2h-3.382l-.724-1.447A1 1 0 0 0 11 2H9zM7 8a1 1 0 0 1 2 0v6a1 1 0 1 1-2 0V8zm5-1a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0V8a1 1 0 0 0-1-1z" clipRule="evenodd"/>
+  </svg>
+)
 
 export default function SettingsPage() {
   const { theme } = useTheme()
@@ -381,12 +387,6 @@ export default function SettingsPage() {
   const chipStyle = {
     background: theme.surface, color: theme.text, border: `1px solid ${theme.border}`,
   }
-
-  const TrashIcon = () => (
-    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-      <path fillRule="evenodd" d="M9 2a1 1 0 0 0-.894.553L7.382 4H4a1 1 0 0 0 0 2v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6a1 1 0 1 0 0-2h-3.382l-.724-1.447A1 1 0 0 0 11 2H9zM7 8a1 1 0 0 1 2 0v6a1 1 0 1 1-2 0V8zm5-1a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0V8a1 1 0 0 0-1-1z" clipRule="evenodd"/>
-    </svg>
-  )
 
   return (
     <div className="max-w-3xl mx-auto">

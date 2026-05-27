@@ -418,6 +418,12 @@ function FormsEditor({
   const [picking, setPicking] = useState(false)
   const [query, setQuery] = useState('')
 
+  const pickerResults = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return []
+    return allMonsters.filter(m => m.name.toLowerCase().includes(q)).slice(0, 8)
+  }, [allMonsters, query])
+
   // Phases are a boss feature — hide them entirely for trivial creatures.
   // Threshold is CR 5 (gates only the picker; existing phases still render so
   // the user can remove them if they swap a high-CR primary for a low-CR one).
@@ -459,11 +465,6 @@ function FormsEditor({
     writeForms(current)
   }
 
-  const pickerResults = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return []
-    return allMonsters.filter(m => m.name.toLowerCase().includes(q)).slice(0, 8)
-  }, [allMonsters, query])
 
   const totalXp = (group.forms && group.forms.length > 1)
     ? group.forms.reduce((a, f) => a + f.xp, 0)

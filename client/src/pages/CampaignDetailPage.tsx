@@ -26,6 +26,33 @@ export default function CampaignDetailPage() {
   } = useCombat()
 
   const campaign = id ? campaigns[id] : null
+
+  // Hooks must run unconditionally (before any early return). They guard against
+  // a not-yet-loaded campaign so hook order stays stable across renders.
+  const campaignEncounters = useMemo(
+    () => campaign
+      ? Object.values(encounters)
+          .filter(e => e.campaignId === campaign.id)
+          .sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))
+      : [],
+    [encounters, campaign],
+  )
+  const allMonsters = useMemo(() => {
+    const out = Object.values(customMonsters)
+    const seen = new Set(out.map(m => m.slug))
+    for (const m of MONSTERS) if (!seen.has(m.slug)) out.push(m)
+    return out
+  }, [customMonsters])
+  const [partyOpenOverride, setPartyOpenOverride] = useState<boolean | null>(null)
+  const [noteQuery, setNoteQuery] = useState('')
+  const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({})
+  const [expandedSessions, setExpandedSessions] = useState<Record<string, boolean>>({})
+  const pickerResults = useMemo(() => {
+    const q = noteQuery.trim().toLowerCase()
+    if (!q) return []
+    return allMonsters.filter(m => m.name.toLowerCase().includes(q)).slice(0, 8)
+  }, [allMonsters, noteQuery])
+
   if (id && !campaign && Object.keys(campaigns).length > 0) {
     return <Navigate to="/campaigns" replace />
   }
@@ -37,6 +64,8 @@ export default function CampaignDetailPage() {
 
   const isActive = campaign.id === activeCampaignId
   const party = campaign.party
+  const partyHasContent = party.characters.length > 0 || party.generic.some(g => g.count > 0)
+  const partyOpen = partyOpenOverride ?? !partyHasContent
   const rules = [...Object.values(customRuleElements), ...SRD_RULE_ELEMENTS]
   const sheetPartyCharacters = Object.values(characters)
     .filter(c => c.campaignId === campaign.id)
@@ -99,14 +128,6 @@ export default function CampaignDetailPage() {
     upsertCharacter({ ...c, campaignId: '', updatedAt: new Date().toISOString() })
   }
 
-  // ── Encounters scoped to this campaign ──
-  const campaignEncounters = useMemo(
-    () => Object.values(encounters)
-      .filter(e => e.campaignId === campaign.id)
-      .sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? '')),
-    [encounters, campaign.id],
-  )
-
   const runEncounter = async (e: Encounter) => {
     const e2 = { ...e, partySnapshot: effectiveParty, updatedAt: new Date().toISOString() }
     await upsertEncounter(e2)
@@ -117,30 +138,16 @@ export default function CampaignDetailPage() {
     navigate('/combat')
   }
 
-  // ── Monster notes: editor with picker ──
-  const allMonsters = useMemo(() => {
-    const out = Object.values(customMonsters)
-    const seen = new Set(out.map(m => m.slug))
-    for (const m of MONSTERS) if (!seen.has(m.slug)) out.push(m)
-    return out
-  }, [customMonsters])
-
   // Party section is collapsed by default once configured — it's a one-off setup
   // panel that becomes noise on every campaign visit afterwards. Opens
   // automatically only when the party is genuinely empty (no characters and zero
   // generic count), or when the user clicks the header to expand.
-  const partyHasContent = party.characters.length > 0 || party.generic.some(g => g.count > 0)
-  const [partyOpen, setPartyOpen] = useState(!partyHasContent)
-
-  const [noteQuery, setNoteQuery] = useState('')
   // Per-slug expanded state. Newly-added entries (via picker) auto-open; everything
   // else starts collapsed so a long list stays scannable.
-  const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({})
   const toggleExpanded = (slug: string) =>
     setExpandedNotes(prev => ({ ...prev, [slug]: !prev[slug] }))
 
   // Dated session-log entries — same expand/collapse pattern as creature notes.
-  const [expandedSessions, setExpandedSessions] = useState<Record<string, boolean>>({})
   const toggleSession = (id: string) =>
     setExpandedSessions(prev => ({ ...prev, [id]: !prev[id] }))
   const sessionLog = campaign.sessionLog ?? []
@@ -176,12 +183,6 @@ export default function CampaignDetailPage() {
     update({ monsterNotes: next })
   }
 
-  const pickerResults = useMemo(() => {
-    const q = noteQuery.trim().toLowerCase()
-    if (!q) return []
-    return allMonsters.filter(m => m.name.toLowerCase().includes(q)).slice(0, 8)
-  }, [allMonsters, noteQuery])
-
   const slugName = (slug: string) => allMonsters.find(m => m.slug === slug)?.name ?? slug
 
   return (
@@ -208,7 +209,7 @@ export default function CampaignDetailPage() {
 
       {/* Party */}
       <Surface className="p-6 mb-5">
-        <button type="button" onClick={() => setPartyOpen(o => !o)}
+        <button type="button" onClick={() => setPartyOpenOverride(!partyOpen)}
           aria-expanded={partyOpen}
           className="w-full flex items-center gap-2 text-left hover:opacity-90"
           style={{ background: 'transparent', border: 'none', color: 'inherit', marginBottom: partyOpen ? '8px' : '0' }}>

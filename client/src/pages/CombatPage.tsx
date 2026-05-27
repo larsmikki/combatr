@@ -38,7 +38,7 @@ export default function CombatPage() {
   // Spacebar advances the turn. Listener lives at the top level so hook order
   // stays stable across the various early returns below.
   const sessionRef = useRef(session)
-  sessionRef.current = session
+  useEffect(() => { sessionRef.current = session })
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.code !== 'Space' && e.key !== ' ') return
@@ -439,9 +439,9 @@ export default function CombatPage() {
 // can reference (and amend) prep notes without leaving the tracker.
 function CampaignMonsterNote({ slug, note, onChange }: { slug: string; note: string; onChange: (v: string) => void }) {
   const { theme } = useTheme()
-  const [draft, setDraft] = useState(note)
-  // Resync when slug or upstream note changes (e.g. selecting a different combatant).
-  useEffect(() => { setDraft(note) }, [slug, note])
+  const [drafts, setDrafts] = useState<Record<string, string>>({})
+  const draft = drafts[slug] ?? note
+  const setDraft = (value: string) => setDrafts(prev => ({ ...prev, [slug]: value }))
   return (
     <div className="mt-4 pt-4" style={{ borderTop: `1px dashed ${theme.border}` }}>
       <div className="flex items-center justify-between mb-1.5">

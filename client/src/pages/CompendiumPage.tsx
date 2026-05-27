@@ -13,6 +13,9 @@ import type { Monster, Spell, MagicItem } from '@/types'
 import { Surface, Modal, Input, Select, Pill } from '@/components/ui'
 
 const SPELL_LEVEL_LABEL = (lv: number) => lv === 0 ? 'Cantrip' : `Level ${lv}`
+const RARITY_ORDER: Record<string, number> = {
+  'common': 0, 'uncommon': 1, 'rare': 2, 'very rare': 3, 'legendary': 4, 'artifact': 5, 'varies': 6,
+}
 
 export default function CompendiumPage() {
   const { theme } = useTheme()
@@ -93,9 +96,6 @@ export default function CompendiumPage() {
     () => [...new Set(ITEMS.map(i => i.type))].filter(Boolean).sort(),
     [],
   )
-  const RARITY_ORDER: Record<string, number> = {
-    'common': 0, 'uncommon': 1, 'rare': 2, 'very rare': 3, 'legendary': 4, 'artifact': 5, 'varies': 6,
-  }
   const filteredItems = useMemo(() => {
     const q = query.trim().toLowerCase()
     return ITEMS.filter(i =>

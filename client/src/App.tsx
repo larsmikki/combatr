@@ -1,21 +1,24 @@
+import { Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ThemeProvider } from '@/contexts/ThemeContext'
-import { CombatProvider, useCombat } from '@/contexts/CombatContext'
+import { useCombat } from '@/contexts/CombatContext'
+import { CombatProvider } from '@/contexts/CombatProvider'
 import { ConfirmProvider } from '@/components/ConfirmDialog'
 import { ToastProvider } from '@/components/ui'
 import Layout from '@/components/Layout'
-import FrontPage from '@/pages/FrontPage'
-import EncountersListPage from '@/pages/EncountersListPage'
-import EncounterEditPage from '@/pages/EncounterEditPage'
-import CampaignsListPage from '@/pages/CampaignsListPage'
-import CampaignDetailPage from '@/pages/CampaignDetailPage'
-import CharactersListPage from '@/pages/CharactersListPage'
-import CharacterDetailPage from '@/pages/CharacterDetailPage'
-import CharacterPrintPage from '@/pages/CharacterPrintPage'
-import CombatPage from '@/pages/CombatPage'
-import CompendiumPage from '@/pages/CompendiumPage'
-import SettingsPage from '@/pages/SettingsPage'
-import DonatePage from '@/pages/DonatePage'
+
+const FrontPage = lazy(() => import('@/pages/FrontPage'))
+const EncountersListPage = lazy(() => import('@/pages/EncountersListPage'))
+const EncounterEditPage = lazy(() => import('@/pages/EncounterEditPage'))
+const CampaignsListPage = lazy(() => import('@/pages/CampaignsListPage'))
+const CampaignDetailPage = lazy(() => import('@/pages/CampaignDetailPage'))
+const CharactersListPage = lazy(() => import('@/pages/CharactersListPage'))
+const CharacterDetailPage = lazy(() => import('@/pages/CharacterDetailPage'))
+const CharacterPrintPage = lazy(() => import('@/pages/CharacterPrintPage'))
+const CombatPage = lazy(() => import('@/pages/CombatPage'))
+const CompendiumPage = lazy(() => import('@/pages/CompendiumPage'))
+const SettingsPage = lazy(() => import('@/pages/SettingsPage'))
+const DonatePage = lazy(() => import('@/pages/DonatePage'))
 
 // Legacy /party route — sends the user to the active campaign's detail page
 // (where party setup now lives). Falls back to the campaign list if there's
@@ -35,6 +38,7 @@ export default function App() {
         <ConfirmProvider>
         <ToastProvider>
         <BrowserRouter>
+        <Suspense fallback={null}>
           <Routes>
             <Route element={<Layout />}>
               <Route path="/" element={<FrontPage />} />
@@ -55,6 +59,7 @@ export default function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
+        </Suspense>
         </BrowserRouter>
         </ToastProvider>
         </ConfirmProvider>

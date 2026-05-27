@@ -17,8 +17,12 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# server is esbuild-bundled into a single self-contained file, so no
-# runtime npm install is needed.
+# Install production server deps (Express, etc.); the server is compiled
+# with tsc to plain JS that requires node_modules at runtime.
+COPY package.json package-lock.json ./
+COPY server/package.json server/
+RUN npm ci -w server --omit=dev
+
 COPY --from=builder /app/server/dist server/dist
 COPY --from=builder /app/client/dist client/dist
 
